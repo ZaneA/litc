@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 if ARGV.length == 0
   $stderr.puts 'Run literate programs.'
   $stderr.puts 'Usage: litc [-n] <file> [--] [additional arguments]'
