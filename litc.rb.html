@@ -17,7 +17,8 @@ external utility. So I hacked one together.</p>
 
 <p>The utility itself is written in a literate style, which you can see below.</p>
 
-<p>Since it will be run from the command line, we will start the file off with a shebang.</p>
+<p>Since it will likely be run from the command line, we will start the file off
+with a shebang.</p>
 <div class="CodeRay">
   <div class="code"><pre><span style="color:#34b">#!/usr/bin/env ruby</span>
 </pre></div>
@@ -70,6 +71,16 @@ exit <span style="color:#00D">1</span> <span style="color:#080;font-weight:bold"
 </pre></div>
 </div>
 
+<h3>Initialise variables</h3>
+
+<p>Here we initialise some global variables.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#d70">$filename_no_ext</span> = <span style="color:#036;font-weight:bold">File</span>.basename(<span style="color:#d70">$filename</span>, <span style="color:#036;font-weight:bold">File</span>.extname(<span style="color:#d70">$filename</span>))
+<span style="color:#d70">$runner</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
+<span style="color:#d70">$code</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
+</pre></div>
+</div>
+
 <h3>Require needed modules</h3>
 
 <p>Now that we have a valid configuration at this point, we can go ahead and
@@ -78,26 +89,24 @@ require the needed Ruby modules.</p>
 <h4>Redcarpet</h4>
 
 <p>This is used for parsing the markdown files.</p>
-
-<h4>CodeRay</h4>
-
-<p>This is used to perform syntax highlighting based on file extension.</p>
 <div class="CodeRay">
   <div class="code"><pre>require <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">redcarpet</span><span style="color:#710">'</span></span>
-require <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">coderay</span><span style="color:#710">'</span></span>
 </pre></div>
 </div>
 
-<h3>Initialise variables</h3>
+<h4>CodeRay</h4>
 
-<p>Here we initialise global variables and use CodeRay to guess the language
-type to be used for highlighting.</p>
+<p>This is used to perform syntax highlighting based on file extension. I&#39;m
+introducing a temporary hack for <code>.scm</code> files as CodeRay doesn&#39;t have a
+Scheme scanner for now; these will be parsed as Clojure source instead.</p>
 <div class="CodeRay">
-  <div class="code"><pre><span style="color:#d70">$filename_no_ext</span> = <span style="color:#036;font-weight:bold">File</span>.basename(<span style="color:#d70">$filename</span>, <span style="color:#036;font-weight:bold">File</span>.extname(<span style="color:#d70">$filename</span>))
-<span style="color:#d70">$runner</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
-<span style="color:#d70">$code</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
+  <div class="code"><pre>require <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">coderay</span><span style="color:#710">'</span></span>
 
-<span style="color:#d70">$lang</span> = <span style="color:#036;font-weight:bold">CodeRay</span>::<span style="color:#036;font-weight:bold">FileType</span>[<span style="color:#d70">$filename_no_ext</span>]
+<span style="color:#080;font-weight:bold">if</span> <span style="color:#036;font-weight:bold">File</span>.extname(<span style="color:#d70">$filename_no_ext</span>) == <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">.scm</span><span style="color:#710">'</span></span>
+  <span style="color:#d70">$lang</span> = <span style="color:#A60">:clojure</span>
+<span style="color:#080;font-weight:bold">else</span>
+  <span style="color:#d70">$lang</span> = <span style="color:#036;font-weight:bold">CodeRay</span>::<span style="color:#036;font-weight:bold">FileType</span>[<span style="color:#d70">$filename_no_ext</span>]
+<span style="color:#080;font-weight:bold">end</span>
 </pre></div>
 </div>
 
@@ -105,9 +114,9 @@ type to be used for highlighting.</p>
 
 <p>Next we need to add some support in Redcarpet for syntax highlighting code
 using CodeRay. This will use the default language (guessed from the file
-extension) unless a language has been explicitly specified in the markdown.</p>
+extension) unless a language has been explicitly specified in markdown.</p>
 
-<p>Of note, the first code block in the file always denotes the command line
+<p><strong>Of note,</strong> the first code block in the file always denotes the command line
 used to run the resulting code.</p>
 <div class="CodeRay">
   <div class="code"><pre><span style="color:#080;font-weight:bold">class</span> <span style="color:#B06;font-weight:bold">HTMLWithCodeRay</span> &lt; <span style="color:#036;font-weight:bold">Redcarpet</span>::<span style="color:#036;font-weight:bold">Render</span>::<span style="color:#036;font-weight:bold">HTML</span>
@@ -178,8 +187,8 @@ code.close
 
 <h3>Call the code!</h3>
 
-<p>Finally, with the code in place, call the specified interpreter and execute the
-contained code!</p>
+<p>Finally, with the code in place, unless <code>-n</code> has been specified on the command
+line, call the specified interpreter and execute the newly extracted code!</p>
 <div class="CodeRay">
   <div class="code"><pre><span style="color:#080;font-weight:bold">if</span> <span style="color:#d70">$runner</span> &amp;&amp; <span style="color:#d70">$run</span>
   system(<span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">&quot;</span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$runner</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#D20"> </span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$filename_no_ext</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#D20"> </span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$args</span>.join <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20"> </span><span style="color:#710">'</span></span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#710">&quot;</span></span>)

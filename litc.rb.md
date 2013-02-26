@@ -15,7 +15,8 @@ external utility. So I hacked one together.
 
 The utility itself is written in a literate style, which you can see below.
 
-Since it will be run from the command line, we will start the file off with a shebang.
+Since it will likely be run from the command line, we will start the file off
+with a shebang.
 
     #!/usr/bin/env ruby
 
@@ -62,6 +63,14 @@ can be passed to the resulting code by placing them after a double dash.
 
     exit 1 if $filename == nil
 
+### Initialise variables
+
+Here we initialise some global variables.
+
+    $filename_no_ext = File.basename($filename, File.extname($filename))
+    $runner = ''
+    $code = ''
+
 ### Require needed modules
 
 Now that we have a valid configuration at this point, we can go ahead and
@@ -71,31 +80,29 @@ require the needed Ruby modules.
 
 This is used for parsing the markdown files.
 
+    require 'redcarpet'
+
 #### CodeRay
 
-This is used to perform syntax highlighting based on file extension.
+This is used to perform syntax highlighting based on file extension. I'm
+introducing a temporary hack for `.scm` files as CodeRay doesn't have a
+Scheme scanner for now; these will be parsed as Clojure source instead.
 
-    require 'redcarpet'
     require 'coderay'
 
-### Initialise variables
-
-Here we initialise global variables and use CodeRay to guess the language
-type to be used for highlighting.
-
-    $filename_no_ext = File.basename($filename, File.extname($filename))
-    $runner = ''
-    $code = ''
-
-    $lang = CodeRay::FileType[$filename_no_ext]
+    if File.extname($filename_no_ext) == '.scm'
+      $lang = :clojure
+    else
+      $lang = CodeRay::FileType[$filename_no_ext]
+    end
 
 ### Add CodeRay support to Redcarpet
 
 Next we need to add some support in Redcarpet for syntax highlighting code
 using CodeRay. This will use the default language (guessed from the file
-extension) unless a language has been explicitly specified in the markdown.
+extension) unless a language has been explicitly specified in markdown.
 
-Of note, the first code block in the file always denotes the command line
+**Of note,** the first code block in the file always denotes the command line
 used to run the resulting code.
 
     class HTMLWithCodeRay < Redcarpet::Render::HTML
@@ -156,8 +163,8 @@ with the original code extension (in this case `.rb`).
 
 ### Call the code!
 
-Finally, with the code in place, call the specified interpreter and execute the
-contained code!
+Finally, with the code in place, unless `-n` has been specified on the command
+line, call the specified interpreter and execute the newly extracted code!
 
     if $runner && $run
       system("#{$runner} #{$filename_no_ext} #{$args.join ' '}")
