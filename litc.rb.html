@@ -1,0 +1,182 @@
+<h1>Litc</h1>
+
+<p>A utility to compile/interpret literate programs. Written in:</p>
+<div class="CodeRay">
+  <div class="code"><pre>ruby
+</pre></div>
+</div>
+
+<h2>Why</h2>
+
+<p>CoffeeScript recently introduced support for literate programming.
+This is great, but I don&#39;t understand why this needs to be a feature supported
+by the language when code and markdown can just as easily be separated by an
+external utility. So I hacked one together.</p>
+
+<h2>The Code</h2>
+
+<p>The utility itself is written in a literate style, which you can see below.</p>
+
+<h3>Show usage (if no arguments)</h3>
+
+<p>The first thing <code>litc</code> does, is check if any arguments are given. If none are
+then it will print some usage for the user.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#080;font-weight:bold">if</span> <span style="color:#069">ARGV</span>.length == <span style="color:#00D">0</span>
+  <span style="color:#d70">$stderr</span>.puts <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">Run literate programs.</span><span style="color:#710">'</span></span>
+  <span style="color:#d70">$stderr</span>.puts <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">Usage: litc [-n] &lt;file&gt; [--] [additional arguments]</span><span style="color:#710">'</span></span>
+  <span style="color:#d70">$stderr</span>.puts <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">If -n is passed on the command line, the resulting code will not be executed.</span><span style="color:#710">'</span></span>
+  <span style="color:#d70">$stderr</span>.puts <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">Arguments can be passed to the resulting code after a double dash.</span><span style="color:#710">'</span></span>
+  <span style="color:#d70">$stderr</span>.flush
+
+  exit <span style="color:#00D">1</span>
+<span style="color:#080;font-weight:bold">end</span>
+</pre></div>
+</div>
+
+<h3>Parse arguments</h3>
+
+<p>If arguments are given, then <code>litc</code> needs to do a check on these arguments, at
+a minimum this is simply that a file has been passed. The user can also pass
+<code>-n</code> to stop the resulting code from being executed. Additional arguments
+can be passed to the resulting code by placing them after a double dash.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#d70">$run</span> = <span style="color:#069">true</span>
+<span style="color:#d70">$filename</span> = <span style="color:#069">nil</span>
+<span style="color:#d70">$collect_args</span> = <span style="color:#069">false</span>
+<span style="color:#d70">$args</span> = []
+
+<span style="color:#069">ARGV</span>.each <span style="color:#080;font-weight:bold">do</span> |arg|
+  <span style="color:#080;font-weight:bold">if</span> arg == <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">-n</span><span style="color:#710">'</span></span>
+    <span style="color:#d70">$run</span> = <span style="color:#069">false</span>
+  <span style="color:#080;font-weight:bold">elsif</span> arg == <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">--</span><span style="color:#710">'</span></span>
+    <span style="color:#d70">$collect_args</span> = <span style="color:#069">true</span>
+  <span style="color:#080;font-weight:bold">else</span>
+    <span style="color:#080;font-weight:bold">if</span> <span style="color:#d70">$collect_args</span> == <span style="color:#069">true</span>
+      <span style="color:#d70">$args</span> &lt;&lt; arg
+    <span style="color:#080;font-weight:bold">else</span>
+      <span style="color:#d70">$filename</span> = arg
+    <span style="color:#080;font-weight:bold">end</span>
+  <span style="color:#080;font-weight:bold">end</span>
+<span style="color:#080;font-weight:bold">end</span>
+
+exit <span style="color:#00D">1</span> <span style="color:#080;font-weight:bold">if</span> <span style="color:#d70">$filename</span> == <span style="color:#069">nil</span>
+</pre></div>
+</div>
+
+<h3>Require needed modules</h3>
+
+<p>Now that we have a valid configuration at this point, we can go ahead and
+require the needed Ruby modules.</p>
+
+<h4>Redcarpet</h4>
+
+<p>This is used for parsing the markdown files.</p>
+
+<h4>CodeRay</h4>
+
+<p>This is used to perform syntax highlighting based on file extension.</p>
+<div class="CodeRay">
+  <div class="code"><pre>require <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">redcarpet</span><span style="color:#710">'</span></span>
+require <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">coderay</span><span style="color:#710">'</span></span>
+</pre></div>
+</div>
+
+<h3>Initialise variables</h3>
+
+<p>Here we initialise global variables and use CodeRay to guess the language
+type to be used for highlighting.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#d70">$filename_no_ext</span> = <span style="color:#036;font-weight:bold">File</span>.basename(<span style="color:#d70">$filename</span>, <span style="color:#036;font-weight:bold">File</span>.extname(<span style="color:#d70">$filename</span>))
+<span style="color:#d70">$runner</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
+<span style="color:#d70">$code</span> = <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#710">'</span></span>
+
+<span style="color:#d70">$lang</span> = <span style="color:#036;font-weight:bold">CodeRay</span>::<span style="color:#036;font-weight:bold">FileType</span>[<span style="color:#d70">$filename_no_ext</span>]
+</pre></div>
+</div>
+
+<h3>Add CodeRay support to Redcarpet</h3>
+
+<p>Next we need to add some support in Redcarpet for syntax highlighting code
+using CodeRay. This will use the default language (guessed from the file
+extension) unless a language has been explicitly specified in the markdown.</p>
+
+<p>Of note, the first code block in the file always denotes the command line
+used to run the resulting code.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#080;font-weight:bold">class</span> <span style="color:#B06;font-weight:bold">HTMLWithCodeRay</span> &lt; <span style="color:#036;font-weight:bold">Redcarpet</span>::<span style="color:#036;font-weight:bold">Render</span>::<span style="color:#036;font-weight:bold">HTML</span>
+  <span style="color:#080;font-weight:bold">def</span> <span style="color:#06B;font-weight:bold">block_code</span>(code, language)
+    language = <span style="color:#d70">$lang</span> <span style="color:#080;font-weight:bold">if</span> language == <span style="color:#069">nil</span>
+
+    <span style="color:#080;font-weight:bold">if</span> <span style="color:#d70">$runner</span>.empty?
+      <span style="color:#d70">$runner</span> &lt;&lt; code.chomp
+    <span style="color:#080;font-weight:bold">else</span>
+      <span style="color:#d70">$code</span> &lt;&lt; code
+    <span style="color:#080;font-weight:bold">end</span>
+
+    <span style="color:#036;font-weight:bold">CodeRay</span>.scan(code, language).div
+  <span style="color:#080;font-weight:bold">end</span>
+<span style="color:#080;font-weight:bold">end</span>
+</pre></div>
+</div>
+
+<h3>Markdown helper</h3>
+
+<p>Next up, a helper function for taking our text and transforming it with
+CodeRay and also making use of extra Redcarpet syntax.</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#080;font-weight:bold">def</span> <span style="color:#06B;font-weight:bold">markdown</span>(text)
+  options = {
+    <span style="color:#A60">:no_intra_emphasis</span> =&gt; <span style="color:#069">true</span>,
+    <span style="color:#A60">:tables</span> =&gt; <span style="color:#069">true</span>,
+    <span style="color:#A60">:fenced_code_blocks</span> =&gt; <span style="color:#069">true</span>,
+    <span style="color:#A60">:autolink</span> =&gt; <span style="color:#069">true</span>,
+    <span style="color:#A60">:strikethrough</span> =&gt; <span style="color:#069">true</span>,
+    <span style="color:#A60">:superscript</span> =&gt; <span style="color:#069">true</span>
+  }
+
+  html = <span style="color:#036;font-weight:bold">Redcarpet</span>::<span style="color:#036;font-weight:bold">Markdown</span>.new(<span style="color:#036;font-weight:bold">HTMLWithCodeRay</span>, options)
+  html.render(text)
+<span style="color:#080;font-weight:bold">end</span>
+</pre></div>
+</div>
+
+<h3>Write out everything</h3>
+
+<p>At this stage, we have the building blocks needed to transform the input file.</p>
+
+<p>First, open this file and build the markdown HTML output.</p>
+<div class="CodeRay">
+  <div class="code"><pre>source = <span style="color:#036;font-weight:bold">File</span>.new(<span style="color:#d70">$filename</span>)
+markdown_output = markdown(source.read)
+source.close
+</pre></div>
+</div>
+
+<p>Now that we have the output, write it into a file with an <code>.html</code> extension.</p>
+<div class="CodeRay">
+  <div class="code"><pre>html = <span style="color:#036;font-weight:bold">File</span>.new(<span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">&quot;</span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$filename_no_ext</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#D20">.html</span><span style="color:#710">&quot;</span></span>, <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">w</span><span style="color:#710">'</span></span>)
+html.write(markdown_output)
+html.close
+</pre></div>
+</div>
+
+<p>With the code that we have gathered from Redcarpet, write that to another file
+with the original code extension (in this case <code>.rb</code>).</p>
+<div class="CodeRay">
+  <div class="code"><pre>code = <span style="color:#036;font-weight:bold">File</span>.new(<span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">&quot;</span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$filename_no_ext</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#710">&quot;</span></span>, <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20">w</span><span style="color:#710">'</span></span>)
+code.write(<span style="color:#d70">$code</span>)
+code.close
+</pre></div>
+</div>
+
+<h3>Call the code!</h3>
+
+<p>Finally, with the code in place, call the specified interpreter and execute the
+contained code!</p>
+<div class="CodeRay">
+  <div class="code"><pre><span style="color:#080;font-weight:bold">if</span> <span style="color:#d70">$runner</span> &amp;&amp; <span style="color:#d70">$run</span>
+  system(<span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">&quot;</span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$runner</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#D20"> </span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$filename_no_ext</span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#D20"> </span><span style="background-color:hsla(0,0%,0%,0.07);color:black"><span style="font-weight:bold;color:#666">#{</span><span style="color:#d70">$args</span>.join <span style="background-color:hsla(0,100%,50%,0.05)"><span style="color:#710">'</span><span style="color:#D20"> </span><span style="color:#710">'</span></span><span style="font-weight:bold;color:#666">}</span></span><span style="color:#710">&quot;</span></span>)
+<span style="color:#080;font-weight:bold">end</span>
+</pre></div>
+</div>
