@@ -15,6 +15,10 @@ external utility. So I hacked one together.
 
 The utility itself is written in a literate style, which you can see below.
 
+Since it will be run from the command line, we will start the file off with a shebang.
+
+    #!/usr/bin/env ruby
+
 ### Show usage (if no arguments)
 
 The first thing `litc` does, is check if any arguments are given. If none are
